@@ -1,69 +1,136 @@
 const mongoose = require("mongoose");
+const slugify = require("slugify");
+// const validator = require("validator");
 
-const tourSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    requried: [true, "A tour must have a name"],
-    unique: true,
-    trim: true,
+const tourSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      requried: [true, "A tour must have a name"],
+      unique: true,
+      trim: true,
+      maxlength: [40, "A tour name must have less or equal than 40 charcters"],
+      minlength: [10, "A tour name must have more or equal than 10 charcters"],
+      // validate: [validator.isAlpha, "A tour must only contain characters"],
+    },
+
+    slug: {
+      type: String,
+    },
+
+    duration: {
+      type: Number,
+      required: [true, "A tour must have a duration"],
+    },
+
+    maxGroupSize: {
+      type: Number,
+      required: [true, "A tour must have a group size"],
+    },
+
+    difficulty: {
+      type: String,
+      required: [true, "A tour have a difficulty"],
+      enum: {
+        values: ["easy", "medium", "difficulty"],
+        message: "Difficulty is neither easy, medium or difficult",
+      },
+    },
+
+    ratingsAverage: {
+      type: Number,
+      default: 4.5,
+      min: [1, "Rating must be above 1.0"],
+      max: [5, "Rating must be below 5.0"],
+    },
+
+    ratingsQuantity: {
+      type: Number,
+      default: 0,
+    },
+
+    price: {
+      type: Number,
+      required: [true, "A tour must have a price"],
+    },
+
+    priceDiscount: {
+      type: Number,
+      validate: {
+        validator: function (val) {
+          // This only points to current doc on NEW document creation
+          return val < this.price;
+        },
+        message: "Discount price should be below ({VALUE}) regular price",
+      },
+    },
+
+    summary: {
+      type: String,
+      trim: true,
+      required: [true, "A tour must have a summary"],
+    },
+
+    description: {
+      type: String,
+      trim: true,
+    },
+
+    imageCover: {
+      type: String,
+      required: [true, "A tour must have a cover image"],
+    },
+
+    images: [String],
+
+    createdAt: {
+      type: Date,
+      default: Date.now(),
+      select: false,
+    },
+
+    startDates: [Date],
+    secretTour: {
+      type: Boolean,
+      default: false,
+    },
   },
+  {
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  }
+);
 
-  duration: {
-    type: Number,
-    required: [true, "A tour must have a duration"],
-  },
+tourSchema.virtual("durationWeeks").get(function () {
+  return this.duration / 7;
+});
 
-  maxGroupSize: {
-    type: Number,
-    required: [true, "A tour must have a group size"],
-  },
+// DOCUMENT MIDDLEWARE: runs before .save() and create()
+tourSchema.pre("save", function (next) {
+  this.slug = slugify(this.name, { lower: true });
+  next();
+});
 
-  difficulty: {
-    type: String,
-    required: [true, "A tour have a difficulty"],
-  },
+// QUERY MIDDLEWARE
+// tourSchema.pre("find", function (next) {
+tourSchema.pre(/^find/, function (next) {
+  this.find({ secretTour: { $ne: true } });
 
-  ratingsAverage: {
-    type: Number,
-    default: 4.5,
-  },
+  this.start = Date.now();
+  next();
+});
 
-  ratingsQuantity: {
-    type: Number,
-    default: 0,
-  },
+tourSchema.post(/^find/, function (docs, next) {
+  console.log(`Query took ${Date.now() - this.start} milliseconds`);
+  next();
+});
 
-  price: {
-    type: Number,
-    required: [true, "A tour must have a price"],
-  },
+// AGGREGATION MIDDLWARE
+tourSchema.pre("aggregate", function (next) {
+  this.pipeline().unshift({ $match: { secretTour: { $ne: true } } });
 
-  priceDiscount: Number,
-
-  summary: {
-    type: String,
-    trim: true,
-  },
-
-  description: {
-    type: String,
-    trim: true,
-    required: [true, "A tour must have a description"],
-  },
-
-  imageCover: {
-    type: String,
-    required: [true, "A tour must have a cover image"],
-  },
-
-  images: [String],
-
-  createdAt: {
-    type: Date,
-    default: Date.now(),
-  },
-
-  startDates: [Date],
+  console.log(this.pipeline());
+  next();
 });
 
 const Tour = mongoose.model("Tour", tourSchema);
