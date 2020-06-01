@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 const mongoose = require("mongoose");
 // eslint-disable-next-line import/newline-after-import
 const dotenv = require("dotenv");

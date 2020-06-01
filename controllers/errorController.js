@@ -1,5 +1,11 @@
 const AppError = require("../utils/appError");
 
+const handleJWTError = () =>
+  new AppError("Invalid token. Please login again!", 401);
+
+const handleJWTExpired = () =>
+  new AppError("Your token has expired. Please login again!", 401);
+
 const handleCastErrorDB = (err) => {
   const message = `Invalid ${err.path}: ${err.value}.`;
   return new AppError(message, 400);
@@ -57,7 +63,8 @@ module.exports = (err, req, res, next) => {
     if (error.code === 11000) error = handleDuplicateFieldsDB(error);
     if (error.name === "ValidationError")
       error = handleValidationErrorDB(error);
-
+    if (error.name === "JsonWebTokenError") error = handleJWTError();
+    if (error.name === "TokenExpiredError") error = handleJWTExpired();
     sendErrorProd(error, res);
   }
 };
