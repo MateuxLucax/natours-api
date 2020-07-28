@@ -1,8 +1,9 @@
 const fs = require("fs");
 const mongoose = require("mongoose");
 const Tour = require("../../models/tourModel");
-// eslint-disable-next-line import/newline-after-import
+// eslint-disable-next-line import/order
 const dotenv = require("dotenv");
+
 dotenv.config({ path: "./config.env" });
 
 const DB = process.env.DATABASE.replace(
@@ -21,9 +22,7 @@ mongoose
 
 // IMPORT DATA FROM FILE
 
-const tours = JSON.parse(
-  fs.readFileSync(`${__dirname}/tours-simple.json`, "utf-8")
-);
+const tours = JSON.parse(fs.readFileSync(`${__dirname}/tours.json`, "utf-8"));
 
 // INSERT DATA ON DATABASE
 
